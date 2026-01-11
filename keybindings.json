@@ -1,0 +1,9 @@
+[
+    {
+        "key": "ctrl+alt+v",
+        "command": "workbench.action.tasks.runTask",
+        "args": {
+            "task": "AI Commit Paste"
+        }
+    }
+]
