@@ -26,10 +26,16 @@ You are a senior software engineer.
 Generate a concise git commit message from the following diff.
 
 Rules:
-- Imperative mood
-- Max 72 characters
+- Imperative mood (e.g., "Fix", "Add", "Update", not "Fixed" or "Fixes")
+- Max 72 characters (be concise and direct)
 - No punctuation at the end
-- Describe WHAT changed, not HOW
+- Describe WHAT changed, not HOW (focus on the result, not implementation)
+- Use action verbs: Fix, Add, Update, Remove, Refactor, Optimize, etc.
+- Be specific: mention the component/feature being changed
+- No abbreviations or unclear acronyms
+- No personal pronouns (I, we, you)
+- One clear action per commit message
+- Professional and business-focused tone
 
 Git diff:
 $diff
