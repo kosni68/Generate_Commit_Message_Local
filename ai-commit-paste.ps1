@@ -28,19 +28,31 @@ Write-Host "AI server is running"
 
 $prompt = @"
 You are a senior software engineer.
-Generate a concise git commit message from the following diff.
+Generate a concise git commit message from the following diff using Conventional Commits format.
+
+Format: type(scope): description
+- type: feat, fix, perf, build, refactor, style, docs, test, etc.
+- scope: optional, the affected component/feature in parentheses
+- description: what changed (max 50 characters after "type(scope): ")
 
 Rules:
-- Imperative mood (e.g., "Fix", "Add", "Update", not "Fixed" or "Fixes")
-- Max 72 characters (be concise and direct)
-- No punctuation at the end
-- Describe WHAT changed, not HOW (focus on the result, not implementation)
-- Use action verbs: Fix, Add, Update, Remove, Refactor, Optimize, etc.
+- Imperative mood (e.g., "add", "fix", "update", not "added" or "fixes")
+- Start with lowercase after the colon
+- No period at the end
 - Be specific: mention the component/feature being changed
-- No abbreviations or unclear acronyms
+- Use only standard types: feat, fix, perf, build, refactor, style, docs, test
 - No personal pronouns (I, we, you)
 - One clear action per commit message
 - Professional and business-focused tone
+- Include scope when applicable
+
+Examples:
+- feat(auth): add email notifications on login
+- fix(shopping-cart): prevent order of empty cart
+- perf(api): optimize database query performance
+- refactor(core): simplify state management
+- style(ui): remove extra whitespace
+- build: update dependencies
 
 Git diff:
 $diff
