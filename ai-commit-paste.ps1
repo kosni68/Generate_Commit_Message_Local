@@ -5,9 +5,14 @@ Write-Host "Starting AI Commit Paste script"
 # Get staged diff
 $diff = git diff --cached
 if ([string]::IsNullOrWhiteSpace($diff)) {
-    Write-Host "No staged changes found"
-    Write-Host "No staged changes." -ForegroundColor Yellow
-    exit 1
+    Write-Host "No staged changes found, staging all modifications..."
+    git add .
+    $diff = git diff --cached
+    if ([string]::IsNullOrWhiteSpace($diff)) {
+        Write-Host "No modifications to stage." -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "Changes staged successfully" -ForegroundColor Green
 }
 
 Write-Host "Staged diff retrieved, length: $($diff.Length)"
