@@ -1,13 +1,29 @@
 Add-Type -AssemblyName System.Windows.Forms
 
+# Initialize timing tracking
+$script:startTime = Get-Date
+$script:lastTime = $script:startTime
+
+function LogTime($message) {
+    $currentTime = Get-Date
+    $elapsedTotal = ($currentTime - $script:startTime).TotalMilliseconds
+    $elapsedSinceLast = ($currentTime - $script:lastTime).TotalMilliseconds
+    Write-Host "[⏱️ +${elapsedSinceLast}ms | Total: ${elapsedTotal}ms] $message" -ForegroundColor Cyan
+    $script:lastTime = $currentTime
+}
+
 Write-Host "Starting AI Commit Paste script"
+LogTime "Script initialized"
 
 # Get staged diff
 $diff = git diff --cached
+LogTime "Git diff --cached completed"
 if ([string]::IsNullOrWhiteSpace($diff)) {
     Write-Host "No staged changes found, staging all modifications..."
     git add .
+    LogTime "Git add . completed"
     $diff = git diff --cached
+    LogTime "Second git diff --cached completed"
     if ([string]::IsNullOrWhiteSpace($diff)) {
         Write-Host "No modifications to stage." -ForegroundColor Yellow
         exit 1
@@ -16,6 +32,7 @@ if ([string]::IsNullOrWhiteSpace($diff)) {
 }
 
 Write-Host "Staged diff retrieved, length: $($diff.Length)"
+LogTime "Diff retrieval completed"
 
 # Test if AI server is running
 if (!(Test-NetConnection -ComputerName localhost -Port 1234 -InformationLevel Quiet)) {
@@ -25,6 +42,7 @@ if (!(Test-NetConnection -ComputerName localhost -Port 1234 -InformationLevel Qu
 }
 
 Write-Host "AI server is running"
+LogTime "AI server connection verified"
 
 $prompt = @"
 You are a senior software engineer.
@@ -59,6 +77,7 @@ $diff
 "@
 
 Write-Host "Prompt created for AI"
+LogTime "Prompt creation completed"
 
 $body = @{
     model = "local-model"
@@ -70,6 +89,7 @@ $body = @{
 } | ConvertTo-Json -Depth 5
 
 Write-Host "Request body prepared"
+LogTime "Request body serialization completed"
 
 $response = Invoke-RestMethod `
     -Uri "http://localhost:1234/v1/chat/completions" `
@@ -78,20 +98,31 @@ $response = Invoke-RestMethod `
     -Body $body
 
 Write-Host "Response received from AI"
+LogTime "AI API request completed (THIS IS THE SLOWEST PART)"
 
 $message = $response.choices[0].message.content.Trim()
 
 Write-Host "Commit message generated: $message"
+LogTime "Message extraction completed"
 
 # Put message into clipboard
 Set-Clipboard -Value $message
 
 Write-Host "Message copied to clipboard"
+LogTime "Clipboard copy completed"
 
 # Small delay to ensure clipboard is ready
 Start-Sleep -Milliseconds 300
+LogTime "Sleep delay completed"
 
 # Simulate Ctrl+V
 [System.Windows.Forms.SendKeys]::SendWait("^v")
 
 Write-Host "Paste simulated"
+LogTime "Paste simulation completed"
+
+# Final timing summary
+$totalTime = ((Get-Date) - $script:startTime).TotalMilliseconds
+Write-Host "`n========== TIMING SUMMARY ==========" -ForegroundColor Yellow
+Write-Host "Total execution time: ${totalTime}ms" -ForegroundColor Yellow
+Write-Host "===================================`n" -ForegroundColor Yellow
