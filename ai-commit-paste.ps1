@@ -34,9 +34,9 @@ if ([string]::IsNullOrWhiteSpace($diff)) {
 Write-Host "Staged diff retrieved, length: $($diff.Length)"
 LogTime "Diff retrieval completed"
 
-# Test if AI server is running
-if (!(Test-NetConnection -ComputerName localhost -Port 1234 -InformationLevel Quiet)) {
-    Write-Host "AI server not running on localhost:1234"
+# Test if AI server is running with timeout (suppress IPv6 warning)
+$serverCheck = Test-NetConnection -ComputerName localhost -Port 1234 -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+if (!$serverCheck) {
     Write-Host "AI server not running on localhost:1234." -ForegroundColor Red
     exit 1
 }
@@ -95,7 +95,8 @@ $response = Invoke-RestMethod `
     -Uri "http://localhost:1234/v1/chat/completions" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
-    -Body $body
+    -Body $body `
+    -TimeoutSec 120
 
 Write-Host "Response received from AI"
 LogTime "AI API request completed (THIS IS THE SLOWEST PART)"
@@ -111,8 +112,8 @@ Set-Clipboard -Value $message
 Write-Host "Message copied to clipboard"
 LogTime "Clipboard copy completed"
 
-# Small delay to ensure clipboard is ready
-Start-Sleep -Milliseconds 300
+# Small delay to ensure clipboard is ready (reduced from 300ms to 50ms)
+Start-Sleep -Milliseconds 50
 LogTime "Sleep delay completed"
 
 # Simulate Ctrl+V
