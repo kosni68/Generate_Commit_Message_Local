@@ -15,7 +15,16 @@ function LogTime($message) {
 Write-Host "Starting AI Commit Paste script"
 LogTime "Script initialized"
 
-# Get staged diff
+# Parallelize: Start server check in background while doing git diff
+$serverCheckJob = Start-Job -ScriptBlock {
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $tcpClient.ConnectAsync("127.0.0.1", 1234).Wait(500) | Out-Null
+    $serverRunning = $tcpClient.Connected
+    $tcpClient.Close()
+    $serverRunning
+}
+
+# Get staged diff (runs in parallel with server check)
 $diff = git diff --cached
 LogTime "Git diff --cached completed"
 if ([string]::IsNullOrWhiteSpace($diff)) {
@@ -26,6 +35,7 @@ if ([string]::IsNullOrWhiteSpace($diff)) {
     LogTime "Second git diff --cached completed"
     if ([string]::IsNullOrWhiteSpace($diff)) {
         Write-Host "No modifications to stage." -ForegroundColor Yellow
+        Remove-Job -Job $serverCheckJob -Force
         exit 1
     }
     Write-Host "Changes staged successfully" -ForegroundColor Green
@@ -34,11 +44,9 @@ if ([string]::IsNullOrWhiteSpace($diff)) {
 Write-Host "Staged diff retrieved, length: $($diff.Length)"
 LogTime "Diff retrieval completed"
 
-# Test if AI server is running - fast TCP check
-$tcpClient = New-Object System.Net.Sockets.TcpClient
-$tcpClient.ConnectAsync("127.0.0.1", 1234).Wait(500) | Out-Null
-$serverRunning = $tcpClient.Connected
-$tcpClient.Close()
+# Wait for server check to complete
+$serverRunning = Receive-Job -Job $serverCheckJob -Wait
+Remove-Job -Job $serverCheckJob -Force
 
 if (!$serverRunning) {
     Write-Host "AI server not running on localhost:1234." -ForegroundColor Red
@@ -124,8 +132,8 @@ Set-Clipboard -Value $message
 Write-Host "Message copied to clipboard"
 LogTime "Clipboard copy completed"
 
-# Small delay to ensure clipboard is ready (reduced from 300ms to 50ms)
-Start-Sleep -Milliseconds 50
+# Small delay to ensure clipboard is ready (reduced to minimum)
+Start-Sleep -Milliseconds 10
 LogTime "Sleep delay completed"
 
 # Simulate Ctrl+V
