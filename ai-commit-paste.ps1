@@ -95,16 +95,24 @@ $body = @{
 Write-Host "Request body prepared"
 LogTime "Request body serialization completed"
 
-$response = Invoke-RestMethod `
-    -Uri "http://localhost:1234/v1/chat/completions" `
-    -Method POST `
-    -Headers @{ "Content-Type" = "application/json" } `
-    -Body $body `
-    -TimeoutSec 120
+# Save body to temp file to avoid curl parsing issues with JSON dashes
+$tempFile = [System.IO.Path]::GetTempFileName()
+$body | Out-File -FilePath $tempFile -Encoding UTF8 -NoNewline
+
+# Use curl for faster performance
+$curlResponse = curl.exe -s -X POST `
+    -H "Content-Type: application/json" `
+    -d "@$tempFile" `
+    "http://localhost:1234/v1/chat/completions"
+
+# Clean up temp file
+Remove-Item -Path $tempFile -Force
 
 Write-Host "Response received from AI"
 LogTime "AI API request completed (THIS IS THE SLOWEST PART)"
 
+# Parse JSON response
+$response = $curlResponse | ConvertFrom-Json
 $message = $response.choices[0].message.content.Trim()
 
 Write-Host "Commit message generated: $message"
