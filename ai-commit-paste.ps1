@@ -34,9 +34,13 @@ if ([string]::IsNullOrWhiteSpace($diff)) {
 Write-Host "Staged diff retrieved, length: $($diff.Length)"
 LogTime "Diff retrieval completed"
 
-# Test if AI server is running with timeout (suppress IPv6 warning)
-$serverCheck = Test-NetConnection -ComputerName localhost -Port 1234 -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-if (!$serverCheck) {
+# Test if AI server is running - fast TCP check
+$tcpClient = New-Object System.Net.Sockets.TcpClient
+$tcpClient.ConnectAsync("127.0.0.1", 1234).Wait(500) | Out-Null
+$serverRunning = $tcpClient.Connected
+$tcpClient.Close()
+
+if (!$serverRunning) {
     Write-Host "AI server not running on localhost:1234." -ForegroundColor Red
     exit 1
 }
