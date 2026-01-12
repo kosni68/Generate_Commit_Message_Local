@@ -4,6 +4,10 @@ Add-Type -AssemblyName System.Windows.Forms
 $script:startTime = Get-Date
 $script:lastTime = $script:startTime
 
+# Server check cache (valid for 5 minutes)
+$script:serverCheckCache = $null
+$script:serverCheckTime = $null
+
 function LogTime($message) {
     $currentTime = Get-Date
     $elapsedTotal = ($currentTime - $script:startTime).TotalMilliseconds
@@ -12,17 +16,45 @@ function LogTime($message) {
     $script:lastTime = $currentTime
 }
 
+function CheckServerFast {
+    # Return cached result if still valid (5 minutes)
+    if ($null -ne $script:serverCheckCache -and $null -ne $script:serverCheckTime) {
+        $elapsed = (Get-Date) - $script:serverCheckTime
+        if ($elapsed.TotalSeconds -lt 300) {
+            return $script:serverCheckCache
+        }
+    }
+    
+    # Perform check and cache result
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $tcpClient.ConnectAsync("127.0.0.1", 1234).Wait(500) | Out-Null
+    $serverRunning = $tcpClient.Connected
+    $tcpClient.Close()
+    
+    $script:serverCheckCache = $serverRunning
+    $script:serverCheckTime = Get-Date
+    
+    return $serverRunning
+}
+
 Write-Host "Starting AI Commit Paste script"
 LogTime "Script initialized"
 
 # Parallelize: Start server check in background while doing git diff
 $serverCheckJob = Start-Job -ScriptBlock {
+    param($cache, $cacheTime)
+    
+    $elapsed = if ($cacheTime) { (Get-Date) - $cacheTime } else { [TimeSpan]::MaxValue }
+    if ($null -ne $cache -and $elapsed.TotalSeconds -lt 300) {
+        return $cache
+    }
+    
     $tcpClient = New-Object System.Net.Sockets.TcpClient
     $tcpClient.ConnectAsync("127.0.0.1", 1234).Wait(500) | Out-Null
     $serverRunning = $tcpClient.Connected
     $tcpClient.Close()
     $serverRunning
-}
+} -ArgumentList $script:serverCheckCache, $script:serverCheckTime
 
 # Get staged diff (runs in parallel with server check)
 $diff = git diff --cached
@@ -47,6 +79,10 @@ LogTime "Diff retrieval completed"
 # Wait for server check to complete
 $serverRunning = Receive-Job -Job $serverCheckJob -Wait
 Remove-Job -Job $serverCheckJob -Force
+
+# Cache the result
+$script:serverCheckCache = $serverRunning
+$script:serverCheckTime = Get-Date
 
 if (!$serverRunning) {
     Write-Host "AI server not running on localhost:1234." -ForegroundColor Red
