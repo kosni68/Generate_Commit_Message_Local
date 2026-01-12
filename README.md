@@ -13,8 +13,18 @@ A PowerShell utility that automatically generates professional git commit messag
 
 - PowerShell 5.1 or later
 - Git installed and configured
-- AI server running on `localhost:1234`
+- AI server running on `localhost:1234` with the [Tavernari/git-commit-message](https://huggingface.co/Tavernari/git-commit-message) model
 - Windows operating system
+
+## AI Model
+
+This tool uses the **Tavernari/git-commit-message** model hosted on Hugging Face:
+- **Model**: [Tavernari/git-commit-message](https://huggingface.co/Tavernari/git-commit-message)
+- **Type**: Summarization model based on Qwen2
+- **Purpose**: Specialized in generating meaningful git commit messages with reasoning
+- **Features**: Analyzes diffs and generates structured commit messages following Conventional Commits format
+
+The model can be run locally via Ollama or other inference servers for privacy and speed.
 
 ## Installation
 
